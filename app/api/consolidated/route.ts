@@ -23,13 +23,14 @@ export async function POST(req: Request) {
     const outlet = body.outlet ?? 'ALL';
 
     const allReceipts = await prisma.receipt.findMany({ where: { status: 'normal' } });
-    const eligible = allReceipts.filter((r) => {
+    type Row = typeof allReceipts[0];
+    const eligible = allReceipts.filter((r: Row) => {
       const receiptMonth = r.date.toISOString().slice(0, 7);
       return receiptMonth === month && (outlet === 'ALL' || r.outlet === outlet);
     });
 
-    const amount = eligible.reduce((s, r) => s + r.total, 0);
-    const sst = eligible.reduce((s, r) => s + r.sst, 0);
+    const amount = eligible.reduce((s: number, r: Row) => s + r.total, 0);
+    const sst = eligible.reduce((s: number, r: Row) => s + r.sst, 0);
 
     const batchData = {
       month,
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
       amount,
       sst,
       status: 'draft',
-      receiptIds: JSON.stringify(eligible.map((r) => r.id)),
+      receiptIds: JSON.stringify(eligible.map((r: Row) => r.id)),
     };
 
     if (body.submit === true) {
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
       if (result.ok) {
         batchData.status = 'validated';
         await prisma.receipt.updateMany({
-          where: { id: { in: eligible.map((r) => r.id) } },
+          where: { id: { in: eligible.map((r: Row) => r.id) } },
           data: { status: 'consolidated' }
         });
         const batch = await prisma.consolidatedBatch.create({

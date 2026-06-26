@@ -26,7 +26,7 @@ export async function POST(req: Request) {
     const parsed = Papa.parse<Record<string, unknown>>(text, { header: true, skipEmptyLines: true });
 
     const existingNos = new Set(
-      (await prisma.receipt.findMany({ select: { receiptNo: true } })).map((r) => r.receiptNo)
+      (await prisma.receipt.findMany({ select: { receiptNo: true } })).map((r: { receiptNo: string }) => r.receiptNo)
     );
 
     const toCreate = [];
