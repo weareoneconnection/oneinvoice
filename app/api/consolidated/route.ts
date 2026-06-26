@@ -8,7 +8,7 @@ export async function GET() {
   if (error) return error;
   try {
     const batches = await prisma.consolidatedBatch.findMany({ orderBy: { createdAt: 'desc' } });
-    return NextResponse.json(batches.map((b) => ({ ...b, receiptIds: JSON.parse(b.receiptIds) })));
+    return NextResponse.json(batches.map((b: typeof batches[0]) => ({ ...b, receiptIds: JSON.parse(b.receiptIds) })));
   } catch {
     return NextResponse.json({ error: 'Failed to fetch batches.' }, { status: 500 });
   }
