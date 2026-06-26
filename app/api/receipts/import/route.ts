@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import Papa from 'papaparse';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/api-auth';
+import { CsvRowSchema } from '@/lib/validation';
 
 function num(v: unknown) {
   const n = Number(String(v ?? '0').replace(/[^0-9.-]/g, ''));
@@ -30,6 +31,8 @@ export async function POST(req: Request) {
     );
 
     const toCreate = [];
+    const validationErrors: string[] = [];
+
     for (const row of parsed.data) {
       const receiptNo = str(row, ['receiptNo', 'receipt_no', 'bill_no', 'invoice_no', 'order_no'], `R-${Date.now()}`);
       if (existingNos.has(receiptNo)) continue;
@@ -41,6 +44,13 @@ export async function POST(req: Request) {
       const rounding = num(str(row, ['rounding'], '0'));
       const total = num(str(row, ['total', 'grand_total', 'payable_amount'], String(subtotal + serviceCharge + sst - discount + rounding)));
       const rawDate = str(row, ['date', 'datetime', 'created_at'], new Date().toISOString());
+
+      const validated = CsvRowSchema.safeParse({ receiptNo, subtotal, serviceCharge, sst, discount, rounding, total, date: rawDate });
+      if (!validated.success) {
+        validationErrors.push(`Row ${receiptNo}: ${validated.error.errors.map((e) => e.message).join(', ')}`);
+        continue;
+      }
+
       toCreate.push({
         receiptNo,
         outlet: str(row, ['outlet', 'branch', 'location'], 'Main Outlet'),
@@ -53,7 +63,11 @@ export async function POST(req: Request) {
     }
 
     await prisma.receipt.createMany({ data: toCreate });
-    return NextResponse.json({ imported: toCreate.length, skipped: parsed.data.length - toCreate.length });
+    return NextResponse.json({
+      imported: toCreate.length,
+      skipped: parsed.data.length - toCreate.length - validationErrors.length,
+      errors: validationErrors,
+    });
   } catch {
     return NextResponse.json({ error: 'Import failed.' }, { status: 500 });
   }

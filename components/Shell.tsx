@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useSession, signOut } from 'next-auth/react';
-import { Bot, FileText, LayoutDashboard, LogOut, Receipt, ScanLine, Send, ShieldCheck } from 'lucide-react';
+import { Bot, FileText, LayoutDashboard, LogOut, Receipt, ScanLine, Send, Settings, ShieldCheck } from 'lucide-react';
 
 const nav = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -9,7 +9,8 @@ const nav = [
   { href: '/requests', label: 'Customer Requests', icon: ScanLine },
   { href: '/consolidated', label: 'Consolidated', icon: FileText },
   { href: '/myinvois', label: 'MyInvois Center', icon: ShieldCheck },
-  { href: '/ai-accountant', label: 'AI Accountant', icon: Bot }
+  { href: '/ai-accountant', label: 'AI Accountant', icon: Bot },
+  { href: '/settings/users', label: 'User Management', icon: Settings },
 ];
 
 export default function Shell({ children }: { children: React.ReactNode }) {

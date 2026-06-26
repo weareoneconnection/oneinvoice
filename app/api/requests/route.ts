@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getMyInvoisAdapter } from '@/lib/myinvois';
 import { requireAuth } from '@/lib/api-auth';
+import { CustomerRequestSchema } from '@/lib/validation';
+import { sendEInvoiceConfirmation } from '@/lib/email';
 
 export async function GET() {
   const { error } = await requireAuth();
@@ -17,8 +19,18 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    const parsed = CustomerRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.errors.map((e) => e.message).join(', ') },
+        { status: 400 }
+      );
+    }
+    const data = parsed.data;
+
     const receipt = await prisma.receipt.findFirst({
-      where: body.receiptId ? { id: body.receiptId } : { receiptNo: body.receiptNo }
+      where: data.receiptId ? { id: data.receiptId } : { receiptNo: data.receiptNo }
     });
     if (!receipt) return NextResponse.json({ error: 'Receipt not found.' }, { status: 404 });
     if (receipt.status !== 'normal') {
@@ -29,18 +41,18 @@ export async function POST(req: Request) {
     const requestData = {
       receiptId: receipt.id,
       receiptNo: receipt.receiptNo,
-      customerType: body.customerType ?? 'individual',
-      name: body.name,
-      tin: body.tin,
-      idType: body.idType ?? 'NRIC',
-      idNumber: body.idNumber,
-      email: body.email,
-      phone: body.phone ?? null,
-      address: body.address,
+      customerType: data.customerType,
+      name: data.name,
+      tin: data.tin,
+      idType: data.idType,
+      idNumber: data.idNumber,
+      email: data.email,
+      phone: data.phone ?? null,
+      address: data.address,
       status: 'pending' as const,
     };
 
-    const tinCheck = await myinvois.validateTin(body.tin, body.idNumber);
+    const tinCheck = await myinvois.validateTin(data.tin, data.idNumber);
     if (!tinCheck.ok) {
       const request = await prisma.customerRequest.create({
         data: { ...requestData, status: 'failed', error: tinCheck.error }
@@ -65,6 +77,14 @@ export async function POST(req: Request) {
         where: { id: receipt.id },
         data: { status: 'individual_einvoice', customerRequestId: request.id }
       });
+      // Send confirmation email (non-blocking)
+      sendEInvoiceConfirmation({
+        to: data.email,
+        buyerName: data.name,
+        receiptNo: receipt.receiptNo,
+        documentId: result.documentId ?? '',
+        amount: receipt.total,
+      }).catch(() => {});
     }
 
     return NextResponse.json(request);
