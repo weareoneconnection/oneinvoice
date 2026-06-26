@@ -1,13 +1,20 @@
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { rm } from '@/lib/currency';
 import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
 import ImportForm from './ImportForm';
 
 type ReceiptRow = Awaited<ReturnType<typeof prisma.receipt.findMany>>[0];
 
 export default async function ReceiptsPage() {
-  const receipts = await prisma.receipt.findMany({ orderBy: { date: 'desc' } });
+  const session = await getServerSession(authOptions);
+  const restaurantId = session?.user.restaurantId;
+  if (!restaurantId) redirect('/settings/restaurant');
+
+  const receipts = await prisma.receipt.findMany({ where: { restaurantId }, orderBy: { date: 'desc' } });
   return (
     <div>
       <PageHeader title="Receipts" subtitle="Import POS receipts and generate customer e-Invoice request links. Receipts not individually invoiced are eligible for monthly consolidated e-Invoice." />

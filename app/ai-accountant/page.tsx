@@ -1,13 +1,20 @@
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import { monthlyInsight } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
 import { Receipt } from '@/lib/types';
 import ChatBox from './ChatBox';
 
 type ReceiptRow = Awaited<ReturnType<typeof prisma.receipt.findMany>>[0];
 
 export default async function AiAccountantPage() {
-  const receipts = await prisma.receipt.findMany();
+  const session = await getServerSession(authOptions);
+  const restaurantId = session?.user.restaurantId;
+  if (!restaurantId) redirect('/settings/restaurant');
+
+  const receipts = await prisma.receipt.findMany({ where: { restaurantId } });
   const insights = monthlyInsight(receipts.map((r: ReceiptRow) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as Receipt[]);
   return (
     <div>

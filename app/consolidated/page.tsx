@@ -1,15 +1,22 @@
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { rm } from '@/lib/currency';
 import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
 import CreateBatchForm from './CreateBatchForm';
 
 type BatchRow = Awaited<ReturnType<typeof prisma.consolidatedBatch.findMany>>[0];
 
 export default async function ConsolidatedPage() {
+  const session = await getServerSession(authOptions);
+  const restaurantId = session?.user.restaurantId;
+  if (!restaurantId) redirect('/settings/restaurant');
+
   const [receipts, batches] = await Promise.all([
-    prisma.receipt.findMany({ select: { outlet: true } }),
-    prisma.consolidatedBatch.findMany({ orderBy: { createdAt: 'desc' } })
+    prisma.receipt.findMany({ where: { restaurantId }, select: { outlet: true } }),
+    prisma.consolidatedBatch.findMany({ where: { restaurantId }, orderBy: { createdAt: 'desc' } })
   ]);
   const outlets: string[] = Array.from(new Set(receipts.map((r: { outlet: string }) => r.outlet)));
   return (
@@ -24,7 +31,7 @@ export default async function ConsolidatedPage() {
           <tbody>
             {batches.map((b: BatchRow) => (
               <tr key={b.id} className="border-t">
-                <td className="p-3 font-semibold">{b.id}</td>
+                <td className="p-3 font-semibold">{b.id.slice(-8)}</td>
                 <td>{b.month}</td>
                 <td>{b.outlet}</td>
                 <td>{b.receiptCount}</td>

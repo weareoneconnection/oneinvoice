@@ -6,14 +6,30 @@ datasource db {
   provider = "postgresql"
 }
 
+model Restaurant {
+  id                   String              @id @default(cuid())
+  name                 String
+  tin                  String              @default("")
+  myInvoisClientId     String              @default("")
+  myInvoisClientSecret String              @default("")
+  myInvoisMode         String              @default("sandbox")
+  createdAt            DateTime            @default(now())
+  users                User[]
+  receipts             Receipt[]
+  customerRequests     CustomerRequest[]
+  consolidatedBatches  ConsolidatedBatch[]
+}
+
 model User {
-  id           String    @id @default(cuid())
-  email        String    @unique
-  passwordHash String
-  name         String?
-  createdAt    DateTime  @default(now())
-  accounts     Account[]
-  sessions     Session[]
+  id             String     @id @default(cuid())
+  email          String     @unique
+  passwordHash   String
+  name           String?
+  restaurantId   String?
+  createdAt      DateTime   @default(now())
+  restaurant     Restaurant? @relation(fields: [restaurantId], references: [id])
+  accounts       Account[]
+  sessions       Session[]
 }
 
 model Account {
@@ -43,59 +59,58 @@ model Session {
 }
 
 model Receipt {
-  id                String   @id @default(cuid())
-  receiptNo         String   @unique
+  id                String     @id @default(cuid())
+  restaurantId      String
+  receiptNo         String
   outlet            String
-  channel           String   @default("dine_in")
+  channel           String     @default("dine_in")
   date              DateTime
-  subtotal          Float    @default(0)
-  serviceCharge     Float    @default(0)
-  sst               Float    @default(0)
-  discount          Float    @default(0)
-  rounding          Float    @default(0)
+  subtotal          Float      @default(0)
+  serviceCharge     Float      @default(0)
+  sst               Float      @default(0)
+  discount          Float      @default(0)
+  rounding          Float      @default(0)
   total             Float
-  status            String   @default("normal")
+  status            String     @default("normal")
   customerRequestId String?
-  items             String   @default("[]")
-  createdAt         DateTime @default(now())
+  items             String     @default("[]")
+  createdAt         DateTime   @default(now())
+  restaurant        Restaurant @relation(fields: [restaurantId], references: [id])
+
+  @@unique([restaurantId, receiptNo])
 }
 
 model CustomerRequest {
-  id                 String   @id @default(cuid())
+  id                 String     @id @default(cuid())
+  restaurantId       String
   receiptId          String
   receiptNo          String
-  customerType       String   @default("individual")
+  customerType       String     @default("individual")
   name               String
   tin                String
-  idType             String   @default("NRIC")
+  idType             String     @default("NRIC")
   idNumber           String
   email              String
   phone              String?
   address            String
-  status             String   @default("pending")
+  status             String     @default("pending")
   myInvoisDocumentId String?
   error              String?
-  createdAt          DateTime @default(now())
+  createdAt          DateTime   @default(now())
+  restaurant         Restaurant @relation(fields: [restaurantId], references: [id])
 }
 
 model ConsolidatedBatch {
-  id                   String   @id @default(cuid())
+  id                   String     @id @default(cuid())
+  restaurantId         String
   month                String
   outlet               String
-  receiptCount         Int      @default(0)
-  amount               Float    @default(0)
-  sst                  Float    @default(0)
-  status               String   @default("draft")
-  receiptIds           String   @default("[]")
+  receiptCount         Int        @default(0)
+  amount               Float      @default(0)
+  sst                  Float      @default(0)
+  status               String     @default("draft")
+  receiptIds           String     @default("[]")
   myInvoisSubmissionId String?
-  createdAt            DateTime @default(now())
-}
-
-model MyInvoisConfig {
-  id            String   @id @default("singleton")
-  mode          String   @default("sandbox")
-  apiConnection String   @default("mocked")
-  taxpayerName  String   @default("OneInvoice Demo Restaurant Sdn Bhd")
-  taxpayerTin   String   @default("C1234567890")
-  lastSyncAt    DateTime @default(now())
+  createdAt            DateTime   @default(now())
+  restaurant           Restaurant @relation(fields: [restaurantId], references: [id])
 }

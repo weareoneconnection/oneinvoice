@@ -1,12 +1,19 @@
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
 import { explainEinvoiceError } from '@/lib/ai';
 
 type RequestRow = Awaited<ReturnType<typeof prisma.customerRequest.findMany>>[0];
 
 export default async function RequestsPage() {
-  const requests = await prisma.customerRequest.findMany({ orderBy: { createdAt: 'desc' } });
+  const session = await getServerSession(authOptions);
+  const restaurantId = session?.user.restaurantId;
+  if (!restaurantId) redirect('/settings/restaurant');
+
+  const requests = await prisma.customerRequest.findMany({ where: { restaurantId }, orderBy: { createdAt: 'desc' } });
   return (
     <div>
       <PageHeader title="Customer e-Invoice Requests" subtitle="Buyer-submitted e-Invoice requests from receipt QR links. Failed requests include AI-readable issue explanations." />

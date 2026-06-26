@@ -10,6 +10,7 @@ const nav = [
   { href: '/consolidated', label: 'Consolidated', icon: FileText },
   { href: '/myinvois', label: 'MyInvois Center', icon: ShieldCheck },
   { href: '/ai-accountant', label: 'AI Accountant', icon: Bot },
+  { href: '/settings/restaurant', label: 'Restaurant Settings', icon: Settings },
   { href: '/settings/users', label: 'User Management', icon: Settings },
 ];
 

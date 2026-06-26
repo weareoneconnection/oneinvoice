@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getMyInvoisAdapter } from '@/lib/myinvois';
-import { requireAuth } from '@/lib/api-auth';
+import { requireRestaurant } from '@/lib/api-auth';
 import { CustomerRequestSchema } from '@/lib/validation';
 import { sendEInvoiceConfirmation } from '@/lib/email';
 
 export async function GET() {
-  const { error } = await requireAuth();
+  const { restaurantId, error } = await requireRestaurant();
   if (error) return error;
   try {
-    const requests = await prisma.customerRequest.findMany({ orderBy: { createdAt: 'desc' } });
+    const requests = await prisma.customerRequest.findMany({
+      where: { restaurantId: restaurantId! },
+      orderBy: { createdAt: 'desc' }
+    });
     return NextResponse.json(requests);
   } catch {
     return NextResponse.json({ error: 'Failed to fetch requests.' }, { status: 500 });
@@ -37,8 +40,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Receipt has already been invoiced.' }, { status: 409 });
     }
 
-    const myinvois = getMyInvoisAdapter();
+    const restaurant = await prisma.restaurant.findUnique({ where: { id: receipt.restaurantId } });
+    const myinvois = getMyInvoisAdapter(restaurant ? {
+      clientId: restaurant.myInvoisClientId,
+      clientSecret: restaurant.myInvoisClientSecret,
+      mode: restaurant.myInvoisMode as 'sandbox' | 'production',
+    } : null);
+
     const requestData = {
+      restaurantId: receipt.restaurantId,
       receiptId: receipt.id,
       receiptNo: receipt.receiptNo,
       customerType: data.customerType,
@@ -77,7 +87,6 @@ export async function POST(req: Request) {
         where: { id: receipt.id },
         data: { status: 'individual_einvoice', customerRequestId: request.id }
       });
-      // Send confirmation email (non-blocking)
       sendEInvoiceConfirmation({
         to: data.email,
         buyerName: data.name,

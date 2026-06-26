@@ -1,24 +1,42 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/api-auth';
+import { requireRestaurant } from '@/lib/api-auth';
 
 export async function GET() {
-  const { error } = await requireAuth();
+  const { restaurantId, error } = await requireRestaurant();
   if (error) return error;
   try {
-    const config = await prisma.myInvoisConfig.upsert({
-      where: { id: 'singleton' },
-      update: {},
-      create: { id: 'singleton' }
-    });
+    const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId! } });
+    if (!restaurant) return NextResponse.json({ error: 'Restaurant not found.' }, { status: 404 });
     return NextResponse.json({
-      mode: config.mode,
-      apiConnection: config.apiConnection,
-      taxpayerName: config.taxpayerName,
-      taxpayerTin: config.taxpayerTin,
-      lastSyncAt: config.lastSyncAt.toISOString()
+      mode: restaurant.myInvoisMode,
+      apiConnection: restaurant.myInvoisClientId ? 'connected' : 'mocked',
+      taxpayerName: restaurant.name,
+      taxpayerTin: restaurant.tin,
+      lastSyncAt: new Date().toISOString(),
     });
   } catch {
     return NextResponse.json({ error: 'Failed to fetch MyInvois status.' }, { status: 500 });
+  }
+}
+
+export async function PATCH(req: Request) {
+  const { restaurantId, error } = await requireRestaurant();
+  if (error) return error;
+  try {
+    const body = await req.json();
+    const restaurant = await prisma.restaurant.update({
+      where: { id: restaurantId! },
+      data: {
+        myInvoisClientId: body.clientId ?? undefined,
+        myInvoisClientSecret: body.clientSecret ?? undefined,
+        myInvoisMode: body.mode ?? undefined,
+        tin: body.tin ?? undefined,
+        name: body.name ?? undefined,
+      }
+    });
+    return NextResponse.json({ ok: true, mode: restaurant.myInvoisMode });
+  } catch {
+    return NextResponse.json({ error: 'Failed to update settings.' }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import Papa from 'papaparse';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/api-auth';
+import { requireRestaurant } from '@/lib/api-auth';
 import { CsvRowSchema } from '@/lib/validation';
 
 function num(v: unknown) {
@@ -17,7 +17,7 @@ function str(row: Record<string, unknown>, keys: string[], fallback = '') {
 }
 
 export async function POST(req: Request) {
-  const { error } = await requireAuth();
+  const { restaurantId, error } = await requireRestaurant();
   if (error) return error;
   try {
     const form = await req.formData();
@@ -27,7 +27,8 @@ export async function POST(req: Request) {
     const parsed = Papa.parse<Record<string, unknown>>(text, { header: true, skipEmptyLines: true });
 
     const existingNos = new Set(
-      (await prisma.receipt.findMany({ select: { receiptNo: true } })).map((r: { receiptNo: string }) => r.receiptNo)
+      (await prisma.receipt.findMany({ where: { restaurantId: restaurantId! }, select: { receiptNo: true } }))
+        .map((r: { receiptNo: string }) => r.receiptNo)
     );
 
     const toCreate = [];
@@ -52,6 +53,7 @@ export async function POST(req: Request) {
       }
 
       toCreate.push({
+        restaurantId: restaurantId!,
         receiptNo,
         outlet: str(row, ['outlet', 'branch', 'location'], 'Main Outlet'),
         channel: str(row, ['channel', 'type'], 'dine_in'),

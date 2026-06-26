@@ -1,13 +1,16 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getMyInvoisAdapter } from '@/lib/myinvois';
-import { requireAuth } from '@/lib/api-auth';
+import { requireRestaurant } from '@/lib/api-auth';
 
 export async function GET() {
-  const { error } = await requireAuth();
+  const { restaurantId, error } = await requireRestaurant();
   if (error) return error;
   try {
-    const batches = await prisma.consolidatedBatch.findMany({ orderBy: { createdAt: 'desc' } });
+    const batches = await prisma.consolidatedBatch.findMany({
+      where: { restaurantId: restaurantId! },
+      orderBy: { createdAt: 'desc' }
+    });
     return NextResponse.json(batches.map((b: typeof batches[0]) => ({ ...b, receiptIds: JSON.parse(b.receiptIds) })));
   } catch {
     return NextResponse.json({ error: 'Failed to fetch batches.' }, { status: 500 });
@@ -15,14 +18,14 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { error } = await requireAuth();
+  const { restaurantId, error } = await requireRestaurant();
   if (error) return error;
   try {
     const body = await req.json();
     const month = body.month ?? new Date().toISOString().slice(0, 7);
     const outlet = body.outlet ?? 'ALL';
 
-    const allReceipts = await prisma.receipt.findMany({ where: { status: 'normal' } });
+    const allReceipts = await prisma.receipt.findMany({ where: { restaurantId: restaurantId!, status: 'normal' } });
     type Row = typeof allReceipts[0];
     const eligible = allReceipts.filter((r: Row) => {
       const receiptMonth = r.date.toISOString().slice(0, 7);
@@ -33,6 +36,7 @@ export async function POST(req: Request) {
     const sst = eligible.reduce((s: number, r: Row) => s + r.sst, 0);
 
     const batchData = {
+      restaurantId: restaurantId!,
       month,
       outlet,
       receiptCount: eligible.length,
@@ -43,7 +47,12 @@ export async function POST(req: Request) {
     };
 
     if (body.submit === true) {
-      const myinvois = getMyInvoisAdapter();
+      const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId! } });
+      const myinvois = getMyInvoisAdapter(restaurant ? {
+        clientId: restaurant.myInvoisClientId,
+        clientSecret: restaurant.myInvoisClientSecret,
+        mode: restaurant.myInvoisMode as 'sandbox' | 'production',
+      } : null);
       const tempBatch = { id: 'temp', createdAt: new Date(), myInvoisSubmissionId: undefined, ...batchData };
       const result = await myinvois.submitConsolidatedEInvoice(tempBatch as unknown as Parameters<typeof myinvois.submitConsolidatedEInvoice>[0]);
       if (result.ok) {

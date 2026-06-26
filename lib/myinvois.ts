@@ -6,6 +6,12 @@ export type MyInvoisAdapter = {
   submitConsolidatedEInvoice(batch: ConsolidatedBatch): Promise<{ ok: boolean; submissionId?: string; error?: string; status?: string }>;
 };
 
+export type RestaurantCredentials = {
+  clientId: string;
+  clientSecret: string;
+  mode: 'sandbox' | 'production';
+};
+
 function wait(ms: number) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
 const mockAdapter: MyInvoisAdapter = {
@@ -36,24 +42,24 @@ const mockAdapter: MyInvoisAdapter = {
   }
 };
 
-// Production adapter placeholder — replace with real LHDN MyInvois OAuth + REST implementation
-const productionAdapter: MyInvoisAdapter = {
-  async validateTin() {
-    throw new Error('Production MyInvois adapter not yet implemented. Set MYINVOIS_MODE=sandbox to use mock.');
-  },
-  async submitIndividualEInvoice() {
-    throw new Error('Production MyInvois adapter not yet implemented. Set MYINVOIS_MODE=sandbox to use mock.');
-  },
-  async submitConsolidatedEInvoice() {
-    throw new Error('Production MyInvois adapter not yet implemented. Set MYINVOIS_MODE=sandbox to use mock.');
-  }
-};
-
-export function getMyInvoisAdapter(): MyInvoisAdapter {
-  return process.env.MYINVOIS_MODE === 'production' ? productionAdapter : mockAdapter;
+function makeProductionAdapter(_creds: RestaurantCredentials): MyInvoisAdapter {
+  // TODO: implement real LHDN MyInvois OAuth 2.0 + REST API calls using creds
+  return {
+    async validateTin() {
+      throw new Error('Production MyInvois adapter not yet implemented.');
+    },
+    async submitIndividualEInvoice() {
+      throw new Error('Production MyInvois adapter not yet implemented.');
+    },
+    async submitConsolidatedEInvoice() {
+      throw new Error('Production MyInvois adapter not yet implemented.');
+    }
+  };
 }
 
-// Legacy named exports for backwards compatibility
-export const validateTin = (tin: string, idNumber: string) => mockAdapter.validateTin(tin, idNumber);
-export const submitIndividualEInvoice = (request: CustomerRequest) => mockAdapter.submitIndividualEInvoice(request);
-export const submitConsolidatedEInvoice = (batch: ConsolidatedBatch) => mockAdapter.submitConsolidatedEInvoice(batch);
+export function getMyInvoisAdapter(creds?: RestaurantCredentials | null): MyInvoisAdapter {
+  if (creds?.mode === 'production' && creds.clientId && creds.clientSecret) {
+    return makeProductionAdapter(creds);
+  }
+  return mockAdapter;
+}

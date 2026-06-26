@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/api-auth';
+import { requireRestaurant } from '@/lib/api-auth';
 import { CreateUserSchema } from '@/lib/validation';
 
 export async function GET() {
-  const { error } = await requireAuth();
+  const { restaurantId, error } = await requireRestaurant();
   if (error) return error;
   try {
     const users = await prisma.user.findMany({
+      where: { restaurantId: restaurantId! },
       select: { id: true, email: true, name: true, createdAt: true },
       orderBy: { createdAt: 'asc' },
     });
@@ -19,7 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const { error } = await requireAuth();
+  const { restaurantId, error } = await requireRestaurant();
   if (error) return error;
   try {
     const body = await req.json();
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     if (existing) return NextResponse.json({ error: 'Email already in use.' }, { status: 409 });
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
-      data: { email, passwordHash, name },
+      data: { email, passwordHash, name, restaurantId: restaurantId! },
       select: { id: true, email: true, name: true, createdAt: true },
     });
     return NextResponse.json(user, { status: 201 });

@@ -1,18 +1,25 @@
+import { getServerSession } from 'next-auth';
+import { redirect } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import StatusBadge from '@/components/StatusBadge';
 import { rm } from '@/lib/currency';
 import { monthlyInsight } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/auth';
 import { Receipt } from '@/lib/types';
 
 type ReceiptRow = Awaited<ReturnType<typeof prisma.receipt.findMany>>[0];
 type RequestRow = Awaited<ReturnType<typeof prisma.customerRequest.findMany>>[0];
 
 export default async function DashboardPage() {
+  const session = await getServerSession(authOptions);
+  const restaurantId = session?.user.restaurantId;
+  if (!restaurantId) redirect('/settings/restaurant');
+
   const [receipts, requests] = await Promise.all([
-    prisma.receipt.findMany({ orderBy: { date: 'desc' } }),
-    prisma.customerRequest.findMany()
+    prisma.receipt.findMany({ where: { restaurantId }, orderBy: { date: 'desc' } }),
+    prisma.customerRequest.findMany({ where: { restaurantId } })
   ]);
 
   const total = receipts.reduce((s: number, r: ReceiptRow) => s + r.total, 0);
