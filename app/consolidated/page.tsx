@@ -2,18 +2,16 @@ import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { rm } from '@/lib/currency';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 import CreateBatchForm from './CreateBatchForm';
 
-type BatchRow = Prisma.ConsolidatedBatchGetPayload<Record<string, never>>;
-type ReceiptRow = { outlet: string };
+type BatchRow = Awaited<ReturnType<typeof prisma.consolidatedBatch.findMany>>[0];
 
 export default async function ConsolidatedPage() {
   const [receipts, batches] = await Promise.all([
     prisma.receipt.findMany({ select: { outlet: true } }),
     prisma.consolidatedBatch.findMany({ orderBy: { createdAt: 'desc' } })
   ]);
-  const outlets = Array.from(new Set(receipts.map((r: ReceiptRow) => r.outlet)));
+  const outlets = Array.from(new Set(receipts.map((r: { outlet: string }) => r.outlet)));
   return (
     <div>
       <PageHeader title="Monthly Consolidated e-Invoice" subtitle="Generate monthly consolidated e-Invoice batches for B2C receipts where customers did not request individual e-Invoice." />

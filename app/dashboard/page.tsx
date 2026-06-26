@@ -4,11 +4,10 @@ import StatusBadge from '@/components/StatusBadge';
 import { rm } from '@/lib/currency';
 import { monthlyInsight } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 import { Receipt } from '@/lib/types';
 
-type ReceiptRow = Prisma.ReceiptGetPayload<Record<string, never>>;
-type RequestRow = Prisma.CustomerRequestGetPayload<Record<string, never>>;
+type ReceiptRow = Awaited<ReturnType<typeof prisma.receipt.findMany>>[0];
+type RequestRow = Awaited<ReturnType<typeof prisma.customerRequest.findMany>>[0];
 
 export default async function DashboardPage() {
   const [receipts, requests] = await Promise.all([

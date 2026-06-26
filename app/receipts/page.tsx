@@ -2,10 +2,9 @@ import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { rm } from '@/lib/currency';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 import ImportForm from './ImportForm';
 
-type ReceiptRow = Prisma.ReceiptGetPayload<Record<string, never>>;
+type ReceiptRow = Awaited<ReturnType<typeof prisma.receipt.findMany>>[0];
 
 export default async function ReceiptsPage() {
   const receipts = await prisma.receipt.findMany({ orderBy: { date: 'desc' } });

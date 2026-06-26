@@ -1,11 +1,10 @@
 import PageHeader from '@/components/PageHeader';
 import { monthlyInsight } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 import { Receipt } from '@/lib/types';
 import ChatBox from './ChatBox';
 
-type ReceiptRow = Prisma.ReceiptGetPayload<Record<string, never>>;
+type ReceiptRow = Awaited<ReturnType<typeof prisma.receipt.findMany>>[0];
 
 export default async function AiAccountantPage() {
   const receipts = await prisma.receipt.findMany();

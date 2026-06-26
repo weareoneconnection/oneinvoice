@@ -1,10 +1,9 @@
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 import { explainEinvoiceError } from '@/lib/ai';
 
-type RequestRow = Prisma.CustomerRequestGetPayload<Record<string, never>>;
+type RequestRow = Awaited<ReturnType<typeof prisma.customerRequest.findMany>>[0];
 
 export default async function RequestsPage() {
   const requests = await prisma.customerRequest.findMany({ orderBy: { createdAt: 'desc' } });
