@@ -11,7 +11,7 @@ export default async function ConsolidatedPage() {
     prisma.receipt.findMany({ select: { outlet: true } }),
     prisma.consolidatedBatch.findMany({ orderBy: { createdAt: 'desc' } })
   ]);
-  const outlets = Array.from(new Set(receipts.map((r: { outlet: string }) => r.outlet)));
+  const outlets: string[] = Array.from(new Set(receipts.map((r: { outlet: string }) => r.outlet)));
   return (
     <div>
       <PageHeader title="Monthly Consolidated e-Invoice" subtitle="Generate monthly consolidated e-Invoice batches for B2C receipts where customers did not request individual e-Invoice." />
