@@ -1,0 +1,4 @@
+receiptNo,outlet,channel,date,subtotal,serviceCharge,sst,discount,rounding,total
+R-DEMO-001,KLCC Outlet,dine_in,2026-06-01T12:00:00.000Z,100,0,6,0,0,106
+R-DEMO-002,Main Outlet,takeaway,2026-06-01T13:00:00.000Z,50,0,3,0,0,53
+R-DEMO-003,Bukit Bintang Outlet,delivery,2026-06-02T18:00:00.000Z,80,0,4.8,5,0,79.8
