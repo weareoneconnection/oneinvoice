@@ -4,7 +4,7 @@ import { streamAnswer } from '@/lib/ai';
 export async function POST(req: Request) {
   const { question } = await req.json();
   const rows = await prisma.receipt.findMany();
-  const receipts = rows.map((r) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as import('@/lib/types').Receipt[];
+  const receipts = rows.map((r: typeof rows[0]) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as import('@/lib/types').Receipt[];
 
   const stream = new ReadableStream({
     async start(controller) {
