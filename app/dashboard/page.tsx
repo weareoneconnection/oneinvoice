@@ -15,7 +15,7 @@ export default async function DashboardPage() {
   const sst = receipts.reduce((s, r) => s + r.sst, 0);
   const pending = requests.filter((r) => r.status === 'pending' || r.status === 'failed').length;
   const pool = receipts.filter((r) => r.status === 'normal').reduce((s, r) => s + r.total, 0);
-  const insights = monthlyInsight(receipts.map((r) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as import('@/lib/types').Receipt[]);
+  const insights = monthlyInsight(receipts.map((r: typeof receipts[0]) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as import('@/lib/types').Receipt[]);
 
   return (
     <div>
