@@ -2,7 +2,10 @@ import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { rm } from '@/lib/currency';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import ImportForm from './ImportForm';
+
+type ReceiptRow = Prisma.ReceiptGetPayload<Record<string, never>>;
 
 export default async function ReceiptsPage() {
   const receipts = await prisma.receipt.findMany({ orderBy: { date: 'desc' } });
@@ -16,7 +19,7 @@ export default async function ReceiptsPage() {
             <tr><th className="p-3">Receipt</th><th>Date</th><th>Outlet</th><th>Channel</th><th>Total</th><th>Status</th><th>Customer Link</th></tr>
           </thead>
           <tbody>
-            {receipts.map((r) => (
+            {receipts.map((r: ReceiptRow) => (
               <tr key={r.id} className="border-t">
                 <td className="p-3 font-semibold">{r.receiptNo}</td>
                 <td>{r.date.toISOString().slice(0, 10)}</td>

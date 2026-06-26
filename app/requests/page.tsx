@@ -1,7 +1,10 @@
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { explainEinvoiceError } from '@/lib/ai';
+
+type RequestRow = Prisma.CustomerRequestGetPayload<Record<string, never>>;
 
 export default async function RequestsPage() {
   const requests = await prisma.customerRequest.findMany({ orderBy: { createdAt: 'desc' } });
@@ -14,7 +17,7 @@ export default async function RequestsPage() {
             <tr><th className="p-3">Receipt</th><th>Buyer</th><th>TIN</th><th>Email</th><th>Status</th><th>MyInvois ID / AI Note</th></tr>
           </thead>
           <tbody>
-            {requests.map((r) => (
+            {requests.map((r: RequestRow) => (
               <tr key={r.id} className="border-t">
                 <td className="p-3 font-semibold">{r.receiptNo}</td>
                 <td>{r.name}</td>

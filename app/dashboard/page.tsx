@@ -4,6 +4,11 @@ import StatusBadge from '@/components/StatusBadge';
 import { rm } from '@/lib/currency';
 import { monthlyInsight } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+import { Receipt } from '@/lib/types';
+
+type ReceiptRow = Prisma.ReceiptGetPayload<Record<string, never>>;
+type RequestRow = Prisma.CustomerRequestGetPayload<Record<string, never>>;
 
 export default async function DashboardPage() {
   const [receipts, requests] = await Promise.all([
@@ -11,11 +16,11 @@ export default async function DashboardPage() {
     prisma.customerRequest.findMany()
   ]);
 
-  const total = receipts.reduce((s, r) => s + r.total, 0);
-  const sst = receipts.reduce((s, r) => s + r.sst, 0);
-  const pending = requests.filter((r) => r.status === 'pending' || r.status === 'failed').length;
-  const pool = receipts.filter((r) => r.status === 'normal').reduce((s, r) => s + r.total, 0);
-  const insights = monthlyInsight(receipts.map((r: typeof receipts[0]) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as import('@/lib/types').Receipt[]);
+  const total = receipts.reduce((s: number, r: ReceiptRow) => s + r.total, 0);
+  const sst = receipts.reduce((s: number, r: ReceiptRow) => s + r.sst, 0);
+  const pending = requests.filter((r: RequestRow) => r.status === 'pending' || r.status === 'failed').length;
+  const pool = receipts.filter((r: ReceiptRow) => r.status === 'normal').reduce((s: number, r: ReceiptRow) => s + r.total, 0);
+  const insights = monthlyInsight(receipts.map((r: ReceiptRow) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as Receipt[]);
 
   return (
     <div>
@@ -33,7 +38,7 @@ export default async function DashboardPage() {
             <table className="w-full text-left text-sm">
               <thead className="bg-slate-50 text-slate-500"><tr><th className="p-3">Receipt</th><th>Outlet</th><th>Total</th><th>Status</th></tr></thead>
               <tbody>
-                {receipts.slice(0, 8).map((r) => (
+                {receipts.slice(0, 8).map((r: ReceiptRow) => (
                   <tr key={r.id} className="border-t">
                     <td className="p-3 font-semibold">{r.receiptNo}</td>
                     <td>{r.outlet}</td>
@@ -48,7 +53,7 @@ export default async function DashboardPage() {
         <div className="card p-5">
           <h2 className="text-lg font-black">AI Compliance Insight</h2>
           <div className="mt-4 space-y-3 text-sm text-slate-700">
-            {insights.map((x) => <p key={x}>{x}</p>)}
+            {insights.map((x: string) => <p key={x}>{x}</p>)}
           </div>
         </div>
       </div>

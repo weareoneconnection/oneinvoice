@@ -1,11 +1,15 @@
 import PageHeader from '@/components/PageHeader';
 import { monthlyInsight } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
+import { Receipt } from '@/lib/types';
 import ChatBox from './ChatBox';
+
+type ReceiptRow = Prisma.ReceiptGetPayload<Record<string, never>>;
 
 export default async function AiAccountantPage() {
   const receipts = await prisma.receipt.findMany();
-  const insights = monthlyInsight(receipts.map((r: typeof receipts[0]) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as import('@/lib/types').Receipt[]);
+  const insights = monthlyInsight(receipts.map((r: ReceiptRow) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as Receipt[]);
   return (
     <div>
       <PageHeader title="AI Accountant" subtitle="Natural language assistant powered by Claude AI. Ask about your receipts, SST, consolidated e-Invoice eligibility, or compliance guidance." />
@@ -14,7 +18,7 @@ export default async function AiAccountantPage() {
         <div className="card p-5">
           <h2 className="text-lg font-black">Monthly Pack Summary</h2>
           <div className="mt-4 space-y-3 text-sm text-slate-700">
-            {insights.map((x) => <p key={x}>{x}</p>)}
+            {insights.map((x: string) => <p key={x}>{x}</p>)}
           </div>
         </div>
       </div>
