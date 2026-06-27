@@ -13,6 +13,14 @@ model Restaurant {
   myInvoisClientId     String              @default("")
   myInvoisClientSecret String              @default("")
   myInvoisMode         String              @default("sandbox")
+  // Billing
+  plan                 String              @default("free")   // free | starter | pro
+  stripeCustomerId     String?             @unique
+  stripeSubscriptionId String?             @unique
+  stripePriceId        String?
+  subscriptionStatus   String              @default("active") // active | past_due | canceled | trialing
+  trialEndsAt          DateTime?
+  currentPeriodEnd     DateTime?
   createdAt            DateTime            @default(now())
   users                User[]
   receipts             Receipt[]

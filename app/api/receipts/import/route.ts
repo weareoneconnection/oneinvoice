@@ -3,6 +3,7 @@ import Papa from 'papaparse';
 import { prisma } from '@/lib/prisma';
 import { requireRestaurant } from '@/lib/api-auth';
 import { CsvRowSchema } from '@/lib/validation';
+import { checkReceiptLimit } from '@/lib/plan-guard';
 
 function num(v: unknown) {
   const n = Number(String(v ?? '0').replace(/[^0-9.-]/g, ''));
@@ -19,6 +20,10 @@ function str(row: Record<string, unknown>, keys: string[], fallback = '') {
 export async function POST(req: Request) {
   const { restaurantId, error } = await requireRestaurant();
   if (error) return error;
+  const limitCheck = await checkReceiptLimit(restaurantId!);
+  if (!limitCheck.allowed) {
+    return NextResponse.json({ error: limitCheck.reason, upgradeRequired: limitCheck.upgradeRequired }, { status: 402 });
+  }
   try {
     const form = await req.formData();
     const file = form.get('file');
