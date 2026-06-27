@@ -13,6 +13,10 @@ model Restaurant {
   myInvoisClientId     String              @default("")
   myInvoisClientSecret String              @default("")
   myInvoisMode         String              @default("sandbox")
+  // Reseller / Agency
+  agencyId             String?
+  agency               Restaurant?         @relation("Agency", fields: [agencyId], references: [id])
+  clients              Restaurant[]        @relation("Agency")
   // Billing
   plan                 String              @default("free")   // free | starter | pro
   stripeCustomerId     String?             @unique
@@ -21,6 +25,7 @@ model Restaurant {
   subscriptionStatus   String              @default("active") // active | past_due | canceled | trialing
   trialEndsAt          DateTime?
   currentPeriodEnd     DateTime?
+  webhookUrl           String?
   createdAt            DateTime            @default(now())
   users                User[]
   receipts             Receipt[]

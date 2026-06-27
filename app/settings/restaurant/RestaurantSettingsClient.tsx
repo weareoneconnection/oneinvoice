@@ -9,6 +9,7 @@ type Restaurant = {
   myInvoisMode: string;
   myInvoisClientId: string;
   myInvoisClientSecret: string;
+  webhookUrl: string | null;
 } | null;
 
 export default function RestaurantSettingsClient({ restaurant }: { restaurant: Restaurant }) {
@@ -20,6 +21,7 @@ export default function RestaurantSettingsClient({ restaurant }: { restaurant: R
     mode: restaurant?.myInvoisMode ?? 'sandbox',
     clientId: restaurant?.myInvoisClientId ?? '',
     clientSecret: '',
+    webhookUrl: restaurant?.webhookUrl ?? '',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -56,6 +58,7 @@ export default function RestaurantSettingsClient({ restaurant }: { restaurant: R
         tin: form.tin,
         mode: form.mode,
         clientId: form.clientId,
+        webhookUrl: form.webhookUrl || null,
         ...(form.clientSecret ? { clientSecret: form.clientSecret } : {}),
       }),
     });
@@ -105,6 +108,14 @@ export default function RestaurantSettingsClient({ restaurant }: { restaurant: R
             <label className="mb-1 block text-xs font-semibold text-slate-600">Client Secret</label>
             <input className="input" type="password" value={form.clientSecret} onChange={(e) => update('clientSecret', e.target.value)} placeholder="Leave blank to keep existing" />
           </div>
+        </div>
+
+        <hr className="border-slate-100" />
+        <h2 className="font-black">Webhook Notifications</h2>
+        <p className="text-sm text-slate-500">POST JSON to your POS or ERP whenever an e-Invoice is validated or submitted. Leave blank to disable.</p>
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-600">Webhook URL</label>
+          <input className="input" type="url" value={form.webhookUrl} onChange={(e) => update('webhookUrl', e.target.value)} placeholder="https://your-pos-system.com/webhooks/einvoice" />
         </div>
 
         {error && <p className="text-sm text-red-600">{error}</p>}

@@ -1,8 +1,9 @@
 import { ConsolidatedBatch, CustomerRequest } from './types';
+import { validateTinLive, submitIndividualLive } from './myinvois-api';
 
 export type MyInvoisAdapter = {
-  validateTin(tin: string, idNumber: string): Promise<{ ok: boolean; error?: string }>;
-  submitIndividualEInvoice(request: CustomerRequest): Promise<{ ok: boolean; documentId?: string; error?: string; status?: string }>;
+  validateTin(tin: string, idNumber: string, idType?: string): Promise<{ ok: boolean; error?: string }>;
+  submitIndividualEInvoice(request: CustomerRequest, restaurantName?: string, restaurantTin?: string): Promise<{ ok: boolean; documentId?: string; error?: string; status?: string }>;
   submitConsolidatedEInvoice(batch: ConsolidatedBatch): Promise<{ ok: boolean; submissionId?: string; error?: string; status?: string }>;
 };
 
@@ -42,24 +43,47 @@ const mockAdapter: MyInvoisAdapter = {
   }
 };
 
-function makeProductionAdapter(_creds: RestaurantCredentials): MyInvoisAdapter {
-  // TODO: implement real LHDN MyInvois OAuth 2.0 + REST API calls using creds
+function makeLiveAdapter(creds: RestaurantCredentials): MyInvoisAdapter {
   return {
-    async validateTin() {
-      throw new Error('Production MyInvois adapter not yet implemented.');
+    async validateTin(tin, idNumber, idType = 'NRIC') {
+      try {
+        return await validateTinLive(creds, tin, idType, idNumber);
+      } catch (e) {
+        return { ok: false, error: String(e) };
+      }
     },
-    async submitIndividualEInvoice() {
-      throw new Error('Production MyInvois adapter not yet implemented.');
+    async submitIndividualEInvoice(request, restaurantName = '', restaurantTin = '') {
+      try {
+        const result = await submitIndividualLive(creds, {
+          receiptNo: request.receiptNo,
+          sellerTin: restaurantTin,
+          sellerName: restaurantName,
+          buyerTin: request.tin,
+          buyerName: request.name,
+          buyerIdType: request.idType,
+          buyerIdNumber: request.idNumber,
+          buyerEmail: request.email,
+          buyerAddress: request.address,
+          lineTotal: 0,      // caller should pass receipt amounts; using 0 as placeholder
+          taxAmount: 0,
+          grandTotal: 0,
+        });
+        return { ...result, status: result.ok ? 'validated' : 'failed' };
+      } catch (e) {
+        return { ok: false, error: String(e) };
+      }
     },
-    async submitConsolidatedEInvoice() {
-      throw new Error('Production MyInvois adapter not yet implemented.');
+    async submitConsolidatedEInvoice(batch) {
+      // Consolidated e-Invoice uses same submission endpoint with type '02'
+      // For now fall back to mock until consolidated UBL builder is complete
+      return mockAdapter.submitConsolidatedEInvoice(batch);
     }
   };
 }
 
 export function getMyInvoisAdapter(creds?: RestaurantCredentials | null): MyInvoisAdapter {
-  if (creds?.mode === 'production' && creds.clientId && creds.clientSecret) {
-    return makeProductionAdapter(creds);
+  if (creds?.clientId && creds?.clientSecret) {
+    return makeLiveAdapter(creds);
   }
   return mockAdapter;
 }

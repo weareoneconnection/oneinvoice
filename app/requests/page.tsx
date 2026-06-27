@@ -20,7 +20,7 @@ export default async function RequestsPage() {
       <div className="card overflow-hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50 text-slate-500">
-            <tr><th className="p-3">Receipt</th><th>Buyer</th><th>TIN</th><th>Email</th><th>Status</th><th>MyInvois ID / AI Note</th></tr>
+            <tr><th className="p-3">Receipt</th><th>Buyer</th><th>TIN</th><th>Email</th><th>Status</th><th>MyInvois ID / AI Note</th><th>PDF</th></tr>
           </thead>
           <tbody>
             {requests.map((r: RequestRow) => (
@@ -31,6 +31,11 @@ export default async function RequestsPage() {
                 <td>{r.email}</td>
                 <td><StatusBadge value={r.status} /></td>
                 <td className="max-w-md">{r.myInvoisDocumentId ?? (r.error ? explainEinvoiceError(r.error) : '-')}</td>
+                <td>
+                  {r.myInvoisDocumentId && (
+                    <a href={`/api/invoices/${r.id}/pdf`} target="_blank" className="font-semibold text-slate-900 underline text-xs">PDF</a>
+                  )}
+                </td>
               </tr>
             ))}
             {requests.length === 0 && (

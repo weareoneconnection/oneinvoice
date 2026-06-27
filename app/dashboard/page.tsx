@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import StatusBadge from '@/components/StatusBadge';
+import RevenueChart from '@/components/RevenueChart';
+import OutletChart from '@/components/OutletChart';
 import { rm } from '@/lib/currency';
 import { monthlyInsight } from '@/lib/ai';
 import { prisma } from '@/lib/prisma';
@@ -28,15 +30,48 @@ export default async function DashboardPage() {
   const pool = receipts.filter((r: ReceiptRow) => r.status === 'normal').reduce((s: number, r: ReceiptRow) => s + r.total, 0);
   const insights = monthlyInsight(receipts.map((r: ReceiptRow) => ({ ...r, items: JSON.parse(r.items), date: r.date.toISOString() })) as Receipt[]);
 
+  // Monthly revenue chart (last 6 months)
+  const monthMap = new Map<string, { revenue: number; sst: number }>();
+  for (const r of receipts) {
+    const m = r.date.toISOString().slice(0, 7);
+    const cur = monthMap.get(m) ?? { revenue: 0, sst: 0 };
+    monthMap.set(m, { revenue: cur.revenue + r.total, sst: cur.sst + r.sst });
+  }
+  const revenueData = Array.from(monthMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-6)
+    .map(([month, v]) => ({ month: month.slice(5), ...v }));
+
+  // Outlet breakdown
+  const outletMap = new Map<string, number>();
+  for (const r of receipts) {
+    outletMap.set(r.outlet, (outletMap.get(r.outlet) ?? 0) + r.total);
+  }
+  const outletData = Array.from(outletMap.entries()).map(([outlet, total]) => ({ outlet, total }));
+
   return (
     <div>
-      <PageHeader title="F&B e-Invoice Compliance Dashboard" subtitle="Track POS receipts, customer e-Invoice requests, consolidated e-Invoice pool, and MyInvois readiness for Malaysian restaurants." />
+      <PageHeader title="F&B e-Invoice Compliance Dashboard" subtitle="Track POS receipts, customer e-Invoice requests, consolidated e-Invoice pool, and MyInvois readiness." />
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Sales Captured" value={rm(total)} hint={`${receipts.length} receipts`} />
         <StatCard label="SST Captured" value={rm(sst)} hint="Based on uploaded receipts" />
         <StatCard label="Consolidated Pool" value={rm(pool)} hint="Normal B2C receipts not individually invoiced" />
         <StatCard label="Attention Needed" value={String(pending)} hint="Pending or failed customer requests" />
       </div>
+
+      {revenueData.length > 0 && (
+        <div className="mt-6 grid gap-4 lg:grid-cols-3">
+          <div className="card p-5 lg:col-span-2">
+            <h2 className="mb-4 text-lg font-black">Monthly Revenue & SST</h2>
+            <RevenueChart data={revenueData} />
+          </div>
+          <div className="card p-5">
+            <h2 className="mb-4 text-lg font-black">Revenue by Outlet</h2>
+            {outletData.length > 0 ? <OutletChart data={outletData} /> : <p className="text-sm text-slate-400">No outlet data yet.</p>}
+          </div>
+        </div>
+      )}
+
       <div className="mt-6 grid gap-4 lg:grid-cols-3">
         <div className="card p-5 lg:col-span-2">
           <h2 className="text-lg font-black">Recent Receipts</h2>

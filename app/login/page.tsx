@@ -1,11 +1,14 @@
 'use client';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { Send } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get('registered');
   const [email, setEmail] = useState('admin@demo.com');
   const [password, setPassword] = useState('demo1234');
   const [error, setError] = useState('');
@@ -66,8 +69,13 @@ export default function LoginPage() {
               {loading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
-          <p className="mt-4 text-center text-xs text-slate-400">
-            Demo: admin@demo.com / demo1234
+          {registered && (
+            <p className="mt-4 text-center text-sm text-green-600 font-semibold">Account created! Sign in below.</p>
+          )}
+          <p className="mt-4 text-center text-xs text-slate-400">Demo: admin@demo.com / demo1234</p>
+          <p className="mt-3 text-center text-sm text-slate-500">
+            No account?{' '}
+            <Link href="/register" className="font-semibold text-slate-900 underline">Create one free</Link>
           </p>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { getMyInvoisAdapter } from '@/lib/myinvois';
 import { requireRestaurant } from '@/lib/api-auth';
 import { CustomerRequestSchema } from '@/lib/validation';
 import { sendEInvoiceConfirmation } from '@/lib/email';
+import { fireWebhook } from '@/lib/webhook';
 
 export async function GET() {
   const { restaurantId, error } = await requireRestaurant();
@@ -62,7 +63,7 @@ export async function POST(req: Request) {
       status: 'pending' as const,
     };
 
-    const tinCheck = await myinvois.validateTin(data.tin, data.idNumber);
+    const tinCheck = await myinvois.validateTin(data.tin, data.idNumber, data.idType);
     if (!tinCheck.ok) {
       const request = await prisma.customerRequest.create({
         data: { ...requestData, status: 'failed', error: tinCheck.error }
@@ -71,7 +72,11 @@ export async function POST(req: Request) {
     }
 
     const tempRequest = { id: 'temp', createdAt: new Date(), myInvoisDocumentId: undefined, error: undefined, ...requestData };
-    const result = await myinvois.submitIndividualEInvoice(tempRequest as unknown as Parameters<typeof myinvois.submitIndividualEInvoice>[0]);
+    const result = await myinvois.submitIndividualEInvoice(
+      tempRequest as unknown as Parameters<typeof myinvois.submitIndividualEInvoice>[0],
+      restaurant?.name,
+      restaurant?.tin
+    );
 
     const request = await prisma.customerRequest.create({
       data: {
@@ -92,6 +97,13 @@ export async function POST(req: Request) {
         buyerName: data.name,
         receiptNo: receipt.receiptNo,
         documentId: result.documentId ?? '',
+        amount: receipt.total,
+      }).catch(() => {});
+      fireWebhook(receipt.restaurantId, {
+        event: 'einvoice.validated',
+        documentId: result.documentId ?? '',
+        receiptNo: receipt.receiptNo,
+        buyerName: data.name,
         amount: receipt.total,
       }).catch(() => {});
     }

@@ -33,6 +33,7 @@ export async function PATCH(req: Request) {
         myInvoisMode: body.mode ?? undefined,
         tin: body.tin ?? undefined,
         name: body.name ?? undefined,
+        webhookUrl: body.webhookUrl !== undefined ? (body.webhookUrl || null) : undefined,
       }
     });
     return NextResponse.json({ ok: true, mode: restaurant.myInvoisMode });
